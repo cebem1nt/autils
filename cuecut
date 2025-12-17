@@ -16,6 +16,7 @@ class Track:
 class Cue:
     def __init__(self, lines: list[str]):
         self.tracks: list[Track] = []
+        self.title = "Unknown"
         self.filename = ""
         self.filetype = ""
         self.meta = []
@@ -29,6 +30,9 @@ class Cue:
 
         while i < len(self.lines):
             data = split(self.lines[i])
+
+            if data[0] == "TITLE":
+                self.title = data[1]
 
             if data[0] == "FILE":
                 self.filename = data[1]
@@ -119,6 +123,7 @@ def cuecut(info: Cue, cover_img: str):
             "-to", str(next_track_index),
             "-i", to_split,
             "-i", cover_img,
+            "-metadata", f"album={info.title}",
             "-metadata", f"title={track.title}",
             "-metadata", f"artist={track.artist}",
             "-metadata", f"track={track.num}/{total_tracks}",
