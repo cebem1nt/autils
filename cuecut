@@ -1,5 +1,5 @@
 #!/bin/env python3
-import subprocess, os, sys
+import subprocess, os, sys, argparse
 
 from shlex import split
 from pprint import pprint
@@ -94,7 +94,7 @@ def get_audio_length(audio: str):
 def cuecut(info: Cue, cover_img: str):
     if not os.path.exists(info.filename):
         print(f"File {info.filename} pointed in the .cue does not exist.")
-        sys.exit(1)
+        exit(1)
 
     to_split = info.filename
     total_tracks = len(info.tracks)
@@ -107,7 +107,7 @@ def cuecut(info: Cue, cover_img: str):
 
         if os.path.exists(out_name):
             print(f'"{out_name}" already exists')
-            sys.exit(1)
+            exit(1)
 
         if i + 1 == total_tracks:
             next_track_index = to_split_length
@@ -128,8 +128,8 @@ def cuecut(info: Cue, cover_img: str):
             "-metadata", f"artist={track.artist}",
             "-metadata", f"track={track.num}/{total_tracks}",
             "-disposition:v:0", "attached_pic",
-            "-metadata:s:v:0", "title=Album cover",
-            "-metadata:s:v:0", "comment=Cover (front)",
+            "-metadata:s:v:0",  "title=Album cover",
+            "-metadata:s:v:0",  "comment=Cover (front)",
             out_name
         ]
 
@@ -140,23 +140,42 @@ def cuecut(info: Cue, cover_img: str):
 
         if proc.returncode != 0:
             raise Exception(f"Error: {result.stderr.strip()}")
-            sys.exit(1)
+            exit(1)
 
-def main(cue_file: str, cover_img: str):
-    cover_img = os.path.expanduser(os.path.abspath(cover_img))
-    cue_file = os.path.expanduser(os.path.abspath(cue_file))
+def main(
+    cue: str, 
+    cover: str,
+    input_file: str | None = None,
+    do_cleanup: bool = False
+):
+    cover = os.path.expanduser(os.path.abspath(cover))
+    cue = os.path.expanduser(os.path.abspath(cue))
     lines = []
     
-    with open(cue_file, "r", encoding="utf-8-sig") as f:
+    with open(cue, "r", encoding="utf-8-sig") as f:
         lines = f.readlines()
 
-    print("Parsing", cue_file)    
+    print("Parsing", cue)
     cue_info = Cue(lines)
-    cuecut(cue_info, cover_img)
+
+    if input_file:
+        cue_info.filename = input_file
+
+    cuecut(cue_info, cover)
+
+    if do_cleanup:
+        os.remove(cue)
+        os.remove(cover)
+        os.remove(cue_info.filename)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print(f"Usage: cuecut <cue file> <cover>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
 
-    main(sys.argv[1], sys.argv[2])
+    parser.add_argument("cue",           type=str,         help="Cue file to parse")
+    parser.add_argument("cover",         type=str,         help="Cover image")
+    parser.add_argument("-I", "--input", type=str,         help="Use this input media file instead of the one in the .cue file")
+    parser.add_argument("--cleanup",  action="store_true", help="Remove the .cue, .cover and meda file afterwards")
+
+    args = parser.parse_args()
+
+    main(args.cue, args.cover, args.input, args.cleanup)
