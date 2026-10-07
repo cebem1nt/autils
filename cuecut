@@ -139,8 +139,7 @@ def cuecut(info: Cue, cover_img: str):
                 stderr=subprocess.PIPE)
 
         if proc.returncode != 0:
-            raise Exception(f"Error: {result.stderr.strip()}")
-            exit(1)
+            raise Exception(f"Error: {proc.stderr.strip()}")
 
 def main(
     cue: str, 
