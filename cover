@@ -1,0 +1,44 @@
+#!/bin/env python3
+import argparse, subprocess, os, sys
+
+def main(files: list[str], cover: str):
+    for media in files:
+        print(f"Processing - {media}..")
+
+        if not os.path.exists(media):
+            print(f"File {media} does not exists, skipping", file=sys.stderr)
+            continue
+
+        tmp_out = ".tmp-" + media
+        
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", media,
+            "-i", cover,
+            "-map", "0:a",
+            "-map", "1:v:0",
+            "-c", "copy",
+            "-disposition:v:0","attached_pic",
+            "-metadata:s:v:0", "title=Album cover",
+            "-metadata:s:v:0", "comment=Cover (front)",
+            tmp_out
+        ]
+
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        if proc.returncode != 0:
+            print(f"ffmpeg error: {proc.stderr.strip()}", file=sys.stderr)
+            os.remove(tmp_out)
+            exit(1)
+        
+        os.replace(tmp_out, media)
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+
+    p.add_argument("files", nargs='+', help="media files to tag")
+    p.add_argument("-c", "--cover", help="cover image")
+
+    args = p.parse_args()
+    main(args.files, args.cover)
